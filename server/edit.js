@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { applyPatches } from '../shared/schema.js';
 import { renderToBase64PNG } from './renderer.js';
 import { validatePatches, generateSchemaDoc } from './validate.js';
+import { getAllPalettesForPrompt } from '../shared/palettes.js';
 
 const client = new Anthropic();
 
@@ -50,16 +51,36 @@ const EDIT_SYSTEM_PROMPT = `You edit designs. Your patches array MUST contain at
 
 DO NOT over-analyze. Just output the patches.
 
+Color Palettes (use for consistent colors):
+${getAllPalettesForPrompt()}
+
 Patch formats:
 - UPDATE: { op: "update", id: "element-id", props: { x: 100, y: 200, ... } }
 - ADD: { op: "add", id: "new-id", element: { type: "rect", x: 0, y: 0, width: 100, height: 50, fill: "#000" } }
 - REMOVE: { op: "remove", id: "element-id" }
 
-If the user asks to move/resize elements, use UPDATE with new coordinates.
-If the user asks to add something, use ADD.
-If the user asks to remove something, use REMOVE.
+Fills - solid or gradient:
+- Solid: fill: "#3b82f6"
+- Linear: fill: { type: "linear", angle: 90, stops: [{ offset: 0, color: "#3b82f6" }, { offset: 1, color: "#8b5cf6" }] }
+- Radial: fill: { type: "radial", stops: [{ offset: 0, color: "#fff" }, { offset: 1, color: "#000" }] }
 
-Colors: "#rrggbb". Coordinates: pixels from top-left.`;
+Shadows:
+- shadow: { offsetX: 4, offsetY: 4, blur: 12, color: "#00000025" }
+
+Blur:
+- blur: 4 (gaussian blur radius)
+
+Glow:
+- glow: { blur: 8, color: "#3b82f6", opacity: 0.6 }
+
+Icons:
+- { type: "icon", name: "check", x: 10, y: 10, size: 24, color: "#000" }
+- Names: check, x, plus, minus, arrow-*, chevron-*, home, search, settings, user, bell, mail, heart, star, play, pause, download, upload, trash, edit, share, link, shopping-cart, alert-circle, check-circle, sun, moon, lock, eye, menu, filter, layers
+
+Coordinates: pixels from top-left.
+
+8px Grid: Use spacing multiples of 8 (8, 16, 24, 32, 48, 64, 96).
+Typography: 12/14/16/18/20/24/30/36/48/60px. Weights: 400/500/600/700.`;
 
 function log(msg) {
   console.log(`[edit] ${msg}`);

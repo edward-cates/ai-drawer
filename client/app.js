@@ -37,6 +37,9 @@ const progressOverlay = document.getElementById('progress-overlay');
 const progressTitle = document.getElementById('progress-title');
 const progressLog = document.getElementById('progress-log');
 
+const usageCount = document.getElementById('usage-count');
+const usageFill = document.getElementById('usage-fill');
+
 let createType = null;
 let selectedImage = null;
 
@@ -77,6 +80,7 @@ function handleAuthChange(session) {
     showApp();
     updateUserInfo();
     loadDesigns();
+    loadUsage();
   } else {
     currentUser = null;
     accessToken = null;
@@ -98,6 +102,36 @@ function updateUserInfo() {
   if (currentUser) {
     userEmail.textContent = currentUser.email;
     userAvatar.src = currentUser.user_metadata?.avatar_url || '';
+  }
+}
+
+async function loadUsage() {
+  try {
+    const res = await fetch('/api/usage', {
+      headers: { 'Authorization': `Bearer ${accessToken}` },
+    });
+    if (!res.ok) return;
+
+    const usage = await res.json();
+    updateUsageDisplay(usage);
+  } catch (err) {
+    console.error('Failed to load usage:', err);
+  }
+}
+
+function updateUsageDisplay(usage) {
+  const used = usage.limit - usage.remaining;
+  const percent = (used / usage.limit) * 100;
+
+  usageCount.textContent = `${used}/${usage.limit}`;
+  usageFill.style.width = `${percent}%`;
+
+  // Color based on usage level
+  usageFill.classList.remove('warning', 'critical');
+  if (percent >= 90) {
+    usageFill.classList.add('critical');
+  } else if (percent >= 70) {
+    usageFill.classList.add('warning');
   }
 }
 
@@ -393,6 +427,7 @@ async function createFromDescription(description) {
       renderDesignList();
       renderCanvas();
       promptBar.style.display = 'block';
+      loadUsage(); // Refresh usage after create
     }
   } catch (err) {
     logProgress(`Error: ${err.message}`, 'error');
@@ -459,6 +494,7 @@ async function createFromImage(image) {
       renderDesignList();
       renderCanvas();
       promptBar.style.display = 'block';
+      loadUsage(); // Refresh usage after create
     }
   } catch (err) {
     logProgress(`Error: ${err.message}`, 'error');
@@ -497,6 +533,7 @@ promptForm.addEventListener('submit', async (e) => {
           renderDesignList();
           promptInput.value = '';
           setStatus(event.message || 'Done');
+          loadUsage(); // Refresh usage after edit
           break;
         case 'error':
           setStatus(event.message, true);

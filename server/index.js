@@ -14,6 +14,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(join(__dirname, '../client')));
+app.use('/shared', express.static(join(__dirname, '../shared')));
 
 // Auth middleware - extracts user from Authorization header
 async function authMiddleware(req, res, next) {

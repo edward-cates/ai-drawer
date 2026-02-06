@@ -1,11 +1,45 @@
 import { test, expect } from '@playwright/test';
 
-test.beforeEach(async ({ request }) => {
+// Collect console errors during tests
+let consoleErrors = [];
+
+test.beforeEach(async ({ page, request }) => {
   // Reset test data before each test
   await request.post('/api/test/reset');
+
+  // Track console errors
+  consoleErrors = [];
+  page.on('console', msg => {
+    if (msg.type() === 'error') {
+      consoleErrors.push(msg.text());
+    }
+  });
+  page.on('pageerror', err => {
+    consoleErrors.push(err.message);
+  });
+});
+
+test.afterEach(async () => {
+  // Fail if there were console errors (except expected ones)
+  const realErrors = consoleErrors.filter(e =>
+    !e.includes('favicon.ico') &&
+    !e.includes('net::ERR_FAILED')
+  );
+  if (realErrors.length > 0) {
+    console.error('Console errors:', realErrors);
+  }
+  expect(realErrors).toHaveLength(0);
 });
 
 test.describe('AI Drawer', () => {
+  test('app loads without JS errors', async ({ page }) => {
+    await page.goto('/');
+    // Wait for app to initialize
+    await page.waitForLoadState('networkidle');
+    // If we get here without afterEach failing, no console errors occurred
+    await expect(page.locator('body')).toBeVisible();
+  });
+
   test('shows welcome screen when no designs', async ({ page }) => {
     await page.goto('/');
     // App should show since we're auto-authenticated in test mode
@@ -152,8 +186,8 @@ test.describe('AI Drawer', () => {
     // No confirmation needed - just click to switch
     await page.click('.version-item');
 
-    // Should show revert message
-    await expect(page.locator('#status')).toContainText('Reverted', { timeout: 5000 });
+    // Should show switch message
+    await expect(page.locator('#status')).toContainText('Switched to selected version', { timeout: 5000 });
   });
 
   test('exports design as PNG', async ({ page }) => {

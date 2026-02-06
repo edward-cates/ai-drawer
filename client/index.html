@@ -197,6 +197,45 @@
 
     .logout-btn:hover { color: #ef4444; }
 
+    .usage-info {
+      padding: 12px 16px;
+      border-top: 1px solid #333;
+      font-size: 12px;
+      color: #888;
+    }
+
+    .usage-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .usage-count {
+      color: #e5e5e5;
+    }
+
+    .usage-bar {
+      height: 4px;
+      background: #333;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .usage-fill {
+      height: 100%;
+      background: #3b82f6;
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+
+    .usage-fill.warning {
+      background: #f59e0b;
+    }
+
+    .usage-fill.critical {
+      background: #ef4444;
+    }
+
     /* Main area */
     .main {
       flex: 1;
@@ -538,6 +577,15 @@
       </div>
       <div class="design-list" id="design-list">
         <div class="empty-state">No designs yet</div>
+      </div>
+      <div class="usage-info" id="usage-info">
+        <div class="usage-label">
+          <span>Daily prompts</span>
+          <span class="usage-count" id="usage-count">-/-</span>
+        </div>
+        <div class="usage-bar">
+          <div class="usage-fill" id="usage-fill" style="width: 0%"></div>
+        </div>
       </div>
       <div class="user-info" id="user-info">
         <img class="user-avatar" id="user-avatar" src="" alt="">

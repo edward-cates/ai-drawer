@@ -8,6 +8,7 @@ export const ELEMENT_TYPES = {
   PATH: 'path',
   TEXT: 'text',
   IMAGE: 'image',
+  ICON: 'icon',
   GROUP: 'group',
 };
 
@@ -38,8 +39,58 @@ export const PATCH_OPS = {
 // Image:
 // { type: 'image', x, y, width, height, href, opacity? }
 //
+// Icon (Lucide icons):
+// { type: 'icon', name, x, y, size, color?, opacity?, rotation? }
+// name: icon name like 'check', 'arrow-right', 'heart', 'star', etc.
+// size: icon size in pixels (icons are square)
+// color: stroke color (icons are stroke-based)
+//
 // Group:
 // { type: 'group', children: [...ids], x?, y?, opacity?, rotation? }
+//
+// --- FILL can be a color string OR a gradient object ---
+//
+// Solid fill: fill: "#ff0000"
+//
+// Linear gradient:
+// fill: {
+//   type: 'linear',
+//   angle: 90,  // degrees, 0=left-to-right, 90=top-to-bottom
+//   stops: [
+//     { offset: 0, color: '#ff0000' },
+//     { offset: 1, color: '#0000ff' }
+//   ]
+// }
+//
+// Radial gradient:
+// fill: {
+//   type: 'radial',
+//   stops: [
+//     { offset: 0, color: '#ffffff' },
+//     { offset: 1, color: '#000000' }
+//   ]
+// }
+//
+// --- SHADOW is an object with drop shadow properties ---
+//
+// shadow: {
+//   offsetX: 4,      // horizontal offset in pixels
+//   offsetY: 4,      // vertical offset in pixels
+//   blur: 8,         // blur radius in pixels
+//   color: '#00000040'  // color with alpha (hex8 or rgba)
+// }
+//
+// --- BLUR applies gaussian blur to an element ---
+//
+// blur: 4  // blur radius in pixels
+//
+// --- GLOW creates an outer glow effect ---
+//
+// glow: {
+//   blur: 8,           // blur radius
+//   color: '#3b82f6',  // glow color
+//   opacity: 0.6       // glow opacity (0-1)
+// }
 
 // Default canvas
 export const DEFAULT_CANVAS = {

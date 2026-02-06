@@ -11,18 +11,20 @@ const ELEMENT_REQUIRED_FIELDS = {
   path: ['d'],
   text: ['x', 'y', 'content'],
   image: ['x', 'y', 'width', 'height', 'href'],
+  icon: ['name', 'x', 'y', 'size'],
   group: ['children'],
 };
 
 // Optional fields for each element type
 const ELEMENT_OPTIONAL_FIELDS = {
-  rect: ['fill', 'stroke', 'strokeWidth', 'opacity', 'rotation', 'cornerRadius'],
-  ellipse: ['fill', 'stroke', 'strokeWidth', 'opacity', 'rotation'],
-  line: ['stroke', 'strokeWidth', 'opacity'],
-  path: ['fill', 'stroke', 'strokeWidth', 'opacity'],
-  text: ['fontSize', 'fontFamily', 'fontWeight', 'fill', 'opacity', 'textAnchor'],
-  image: ['opacity'],
-  group: ['x', 'y', 'opacity', 'rotation'],
+  rect: ['fill', 'stroke', 'strokeWidth', 'opacity', 'rotation', 'cornerRadius', 'shadow', 'blur', 'glow'],
+  ellipse: ['fill', 'stroke', 'strokeWidth', 'opacity', 'rotation', 'shadow', 'blur', 'glow'],
+  line: ['stroke', 'strokeWidth', 'opacity', 'shadow', 'blur', 'glow'],
+  path: ['fill', 'stroke', 'strokeWidth', 'opacity', 'shadow', 'blur', 'glow'],
+  text: ['fontSize', 'fontFamily', 'fontWeight', 'fill', 'opacity', 'textAnchor', 'shadow', 'blur', 'glow'],
+  image: ['opacity', 'shadow', 'blur', 'glow'],
+  icon: ['color', 'opacity', 'rotation', 'shadow', 'glow'],
+  group: ['x', 'y', 'opacity', 'rotation', 'shadow', 'blur', 'glow'],
 };
 
 /**
@@ -206,25 +208,63 @@ export function generateSchemaDoc(document) {
 
 ### rect (rectangle)
 Required: x, y, width, height
-Optional: fill, stroke, strokeWidth, opacity, rotation, cornerRadius
+Optional: fill, stroke, strokeWidth, opacity, rotation, cornerRadius, shadow, blur, glow
 
 ### ellipse
 Required: cx, cy, rx, ry
-Optional: fill, stroke, strokeWidth, opacity, rotation
+Optional: fill, stroke, strokeWidth, opacity, rotation, shadow, blur, glow
 
 ### line
 Required: x1, y1, x2, y2
-Optional: stroke, strokeWidth, opacity
+Optional: stroke, strokeWidth, opacity, shadow, blur, glow
 
 ### path (SVG path)
 Required: d (SVG path string, e.g., "M 0 0 L 100 100")
-Optional: fill, stroke, strokeWidth, opacity
+Optional: fill, stroke, strokeWidth, opacity, shadow, blur, glow
 
 ### text
 Required: x, y, content
-Optional: fontSize, fontFamily, fontWeight, fill, opacity, textAnchor
+Optional: fontSize, fontFamily, fontWeight, fill, opacity, textAnchor, shadow, blur, glow
+
+### icon (Lucide icons)
+Required: name, x, y, size
+Optional: color, opacity, rotation, shadow, glow
+Available icons: arrow-left, arrow-right, arrow-up, arrow-down, chevron-left, chevron-right, chevron-up, chevron-down, menu, x, check, plus, minus, home, search, settings, user, users, bell, mail, phone, calendar, clock, heart, star, bookmark, image, camera, video, play, pause, music, file, folder, download, upload, trash, edit, copy, clipboard, message-circle, send, share, link, shopping-cart, shopping-bag, credit-card, dollar-sign, alert-circle, alert-triangle, info, check-circle, x-circle, zap, sun, moon, cloud, globe, lock, unlock, eye, eye-off, refresh-cw, external-link, filter, layers
 
 ### group
 Required: children (array of element ids)
-Optional: x, y, opacity, rotation`;
+Optional: x, y, opacity, rotation, shadow, blur, glow
+
+## Fills
+- Solid: fill: "#3b82f6"
+- Linear gradient: fill: { type: "linear", angle: 90, stops: [{ offset: 0, color: "#..." }, { offset: 1, color: "#..." }] }
+- Radial gradient: fill: { type: "radial", stops: [...] }
+
+## Shadows
+shadow: { offsetX: 4, offsetY: 4, blur: 12, color: "#00000025" }
+
+## Blur
+blur: 4  (gaussian blur radius in pixels)
+
+## Glow
+glow: { blur: 8, color: "#3b82f6", opacity: 0.6 }
+
+## Color Palettes
+Use colors from one palette for visual consistency:
+- modern: #3b82f6 (blue), #8b5cf6, #f59e0b
+- minimal: #18181b (dark), #a1a1aa, #fbbf24
+- vibrant: #ec4899 (pink), #8b5cf6, #06b6d4
+- nature: #16a34a (green), #84cc16, #f97316
+- corporate: #1e40af (navy), #475569, #0891b2
+- dark: #60a5fa on #0f172a background
+- warm: #ea580c (orange), #b45309, #0d9488
+- ocean: #0891b2 (cyan), #0284c7, #f472b6
+- luxury: #7c3aed (purple), #c084fc, #fbbf24
+
+## 8px Grid
+All spacing in multiples of 8: 8, 16, 24, 32, 40, 48, 64, 80, 96, 128
+
+## Typography Scale
+12px (xs) | 14px (sm) | 16px (base) | 18px (lg) | 20px (xl) | 24px (2xl) | 30px (3xl) | 36px (4xl) | 48px (5xl) | 60px (6xl)
+Weights: 400 (normal), 500 (medium), 600 (semibold), 700 (bold)`;
 }

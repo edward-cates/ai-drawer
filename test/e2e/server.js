@@ -10,6 +10,7 @@ const PORT = 3001;
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(join(__dirname, '../../client')));
+app.use('/shared', express.static(join(__dirname, '../../shared')));
 
 // In-memory storage for tests
 let designs = [];
@@ -32,7 +33,7 @@ app.get('/api/config', (req, res) => {
 
 // Usage endpoint
 app.get('/api/usage', (req, res) => {
-  res.json({ allowed: true, remaining: 20, limit: 20 });
+  res.json({ allowed: true, remaining: 100, limit: 100 });
 });
 
 // Get all designs

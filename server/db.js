@@ -183,7 +183,7 @@ export async function getUser(accessToken) {
 }
 
 // Usage/rate limiting
-const DAILY_PROMPT_LIMIT = 20;
+const DAILY_PROMPT_LIMIT = 100;
 
 export async function checkRateLimit(userId) {
   if (!supabase) return { allowed: true, remaining: DAILY_PROMPT_LIMIT };
