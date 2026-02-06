@@ -519,6 +519,7 @@ promptInput.addEventListener('keydown', (e) => {
 
 // Export PNG
 const exportBtn = document.getElementById('export-btn');
+const duplicateBtn = document.getElementById('duplicate-btn');
 exportBtn.addEventListener('click', async () => {
   if (!currentDesign) return;
 
@@ -543,6 +544,32 @@ exportBtn.addEventListener('click', async () => {
   } finally {
     exportBtn.textContent = 'Export PNG';
     exportBtn.disabled = false;
+  }
+});
+
+// Duplicate design
+duplicateBtn.addEventListener('click', async () => {
+  if (!currentDesign) return;
+
+  try {
+    duplicateBtn.textContent = 'Duplicating...';
+    duplicateBtn.disabled = true;
+
+    const res = await apiFetch(`/api/designs/${currentDesign.id}/duplicate`, {
+      method: 'POST',
+    });
+    if (!res.ok) throw new Error('Duplicate failed');
+
+    const newDesign = await res.json();
+    currentDesign = newDesign;
+    await loadDesigns();
+    renderCanvas();
+    setStatus('Design duplicated');
+  } catch (err) {
+    setStatus('Duplicate failed: ' + err.message, true);
+  } finally {
+    duplicateBtn.textContent = 'Duplicate';
+    duplicateBtn.disabled = false;
   }
 });
 

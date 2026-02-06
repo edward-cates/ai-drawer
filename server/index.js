@@ -280,6 +280,23 @@ app.patch('/api/designs/:id', requireAuth, async (req, res) => {
   res.json({ id: design.id, name: req.body.name || design.name });
 });
 
+// Duplicate a design
+app.post('/api/designs/:id/duplicate', requireAuth, async (req, res) => {
+  const design = await getDesign(req.params.id, req.user.id);
+  if (!design) {
+    return res.status(404).json({ error: 'Design not found' });
+  }
+
+  const newDesign = await createDesign(
+    req.user.id,
+    `${design.name} (Copy)`,
+    design.document,
+    design.thumbnail
+  );
+
+  res.json(newDesign);
+});
+
 // Delete a design
 app.delete('/api/designs/:id', requireAuth, async (req, res) => {
   const success = await deleteDesign(req.params.id, req.user.id);
