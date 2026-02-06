@@ -5,3 +5,4 @@ node_modules/
 .DS_Store
 test-match-output.json
 test-match-output.png
+eng.traineddata
