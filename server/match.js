@@ -115,12 +115,21 @@ export async function matchImage(targetImageBuffer, options = {}) {
     { type: 'text', text: generateSchemaDoc(currentDoc) },
   ];
 
-  const buildResponse = await client.messages.create({
+  const buildStream = await client.messages.stream({
     model: 'claude-opus-4-5-20251101',
     max_tokens: 8192,
     system: BUILD_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: buildContent }],
   });
+
+  let dotCount = 0;
+  let thinkingInterval = setInterval(() => {
+    dotCount = (dotCount + 1) % 4;
+    onProgress({ type: 'status', message: 'Building' + '.'.repeat(dotCount + 1) });
+  }, 500);
+
+  const buildResponse = await buildStream.finalMessage();
+  clearInterval(thinkingInterval);
 
   let buildResult = parseResponse(buildResponse);
   if (!buildResult) {
@@ -155,12 +164,21 @@ export async function matchImage(targetImageBuffer, options = {}) {
     { type: 'text', text: 'What conceptual differences do you see? Focus on structure, not pixels.' },
   ];
 
-  const critiqueResponse = await client.messages.create({
+  const critiqueStream = await client.messages.stream({
     model: 'claude-opus-4-5-20251101',
     max_tokens: 2048,
     system: CRITIQUE_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: critiqueContent }],
   });
+
+  dotCount = 0;
+  thinkingInterval = setInterval(() => {
+    dotCount = (dotCount + 1) % 4;
+    onProgress({ type: 'status', message: 'Analyzing' + '.'.repeat(dotCount + 1) });
+  }, 500);
+
+  const critiqueResponse = await critiqueStream.finalMessage();
+  clearInterval(thinkingInterval);
 
   let critiqueResult = parseResponse(critiqueResponse);
   if (!critiqueResult) {
@@ -189,12 +207,21 @@ export async function matchImage(targetImageBuffer, options = {}) {
     { type: 'text', text: generateSchemaDoc(currentDoc) },
   ];
 
-  const fixResponse = await client.messages.create({
+  const fixStream = await client.messages.stream({
     model: 'claude-opus-4-5-20251101',
     max_tokens: 8192,
     system: FIX_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: fixContent }],
   });
+
+  dotCount = 0;
+  thinkingInterval = setInterval(() => {
+    dotCount = (dotCount + 1) % 4;
+    onProgress({ type: 'status', message: 'Fixing' + '.'.repeat(dotCount + 1) });
+  }, 500);
+
+  const fixResponse = await fixStream.finalMessage();
+  clearInterval(thinkingInterval);
 
   let fixResult = parseResponse(fixResponse);
   if (!fixResult) {

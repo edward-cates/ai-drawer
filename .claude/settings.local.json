@@ -24,7 +24,8 @@
       "Bash(supabase orgs list:*)",
       "Bash(supabase link:*)",
       "Bash(supabase db push:*)",
-      "Bash(supabase:*)"
+      "Bash(supabase:*)",
+      "Bash(render logs:*)"
     ]
   }
 }

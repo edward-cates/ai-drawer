@@ -405,6 +405,9 @@ async function createFromImage(image) {
   try {
     await streamSSE('/api/designs/from-image', { image }, (event) => {
       switch (event.type) {
+        case 'status':
+          logProgress(event.message);
+          break;
         case 'phase':
           logProgress(`${event.phase}: ${event.description}`);
           break;
