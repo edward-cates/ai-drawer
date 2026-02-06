@@ -3,12 +3,20 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.SUPABASE_URL || 'https://staukauuowzlrooepwfo.supabase.co';
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseAnonKey) {
-  console.warn('Warning: SUPABASE_ANON_KEY not set. Database features will not work.');
+if (!supabaseServiceKey && !supabaseAnonKey) {
+  console.warn('Warning: No Supabase keys set. Database features will not work.');
 }
 
-export const supabase = supabaseAnonKey
+// Use service role key for server operations (bypasses RLS since we handle auth ourselves)
+// Fall back to anon key for auth operations only
+export const supabase = (supabaseServiceKey || supabaseAnonKey)
+  ? createClient(supabaseUrl, supabaseServiceKey || supabaseAnonKey)
+  : null;
+
+// Separate client with anon key for auth operations
+export const supabaseAuth = supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
