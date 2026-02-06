@@ -94,7 +94,7 @@ export async function createFromDescription(description, onProgress = () => {}) 
   emit('status', 'Sending to AI...');
 
   // Use streaming to show progress
-  const stream = await client.messages.stream({
+  const stream = client.messages.stream({
     model: 'claude-opus-4-5-20251101',
     max_tokens: 8192,
     system: CREATE_SYSTEM_PROMPT,
@@ -108,14 +108,16 @@ export async function createFromDescription(description, onProgress = () => {}) 
     ],
   });
 
-  let dotCount = 0;
-  const thinkingInterval = setInterval(() => {
-    dotCount = (dotCount + 1) % 4;
-    emit('status', 'AI is thinking' + '.'.repeat(dotCount + 1));
-  }, 500);
+  // Stream actual AI output
+  let streamedText = '';
+  stream.on('text', (text) => {
+    streamedText += text;
+    const preview = streamedText.slice(-100).replace(/\n/g, ' ');
+    emit('status', `AI: ${preview}`);
+    log(`[stream] ${text}`);
+  });
 
   const response = await stream.finalMessage();
-  clearInterval(thinkingInterval);
 
   emit('status', 'AI responded');
 

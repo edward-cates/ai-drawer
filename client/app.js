@@ -578,7 +578,7 @@ historyBtn.addEventListener('click', async () => {
         }
         <div class="version-time">
           ${new Date(v.created_at).toLocaleString()}
-          <div class="version-label">Click to revert</div>
+          <div class="version-label">Click to select</div>
         </div>
       </div>
     `).join('');
@@ -616,7 +616,7 @@ async function revertToVersion(versionId) {
     renderCanvas();
     renderDesignList();
     historyModal.classList.remove('open');
-    setStatus('Reverted to previous version');
+    setStatus('Switched to selected version');
   } catch (err) {
     setStatus('Revert failed: ' + err.message, true);
   }

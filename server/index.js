@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -112,6 +113,9 @@ app.post('/api/designs/from-description', requireAuth, async (req, res) => {
       thumbnail
     );
 
+    // Save initial version
+    await saveVersion(design.id, req.user.id, result.document, thumbnail);
+
     // Increment usage
     await incrementUsage(req.user.id);
 
@@ -182,6 +186,9 @@ app.post('/api/designs/from-image', requireAuth, async (req, res) => {
       thumbnail
     );
 
+    // Save initial version
+    await saveVersion(design.id, req.user.id, result.document, thumbnail);
+
     // Increment usage (image matching uses 3 API calls)
     await incrementUsage(req.user.id);
     await incrementUsage(req.user.id);
@@ -232,9 +239,6 @@ app.post('/api/designs/:id/edit', requireAuth, async (req, res) => {
   };
 
   try {
-    // Save current version before editing
-    await saveVersion(req.params.id, req.user.id, design.document, design.thumbnail);
-
     const result = await editDesign(design.document, prompt, [], (progress) => {
       sendEvent(progress);
     });
@@ -251,6 +255,9 @@ app.post('/api/designs/:id/edit', requireAuth, async (req, res) => {
       document: result.document,
       thumbnail,
     });
+
+    // Save this version to history
+    await saveVersion(req.params.id, req.user.id, result.document, thumbnail);
 
     // Increment usage
     await incrementUsage(req.user.id);
@@ -351,8 +358,11 @@ app.get('/api/designs/:id/render', requireAuth, async (req, res) => {
     return res.status(404).json({ error: 'Design not found' });
   }
 
+  // Scale: 1 = original, 2 = 2x, 3 = 3x (default 2x for high-res export)
+  const scale = Math.min(4, Math.max(1, parseInt(req.query.scale) || 2));
+
   try {
-    const png = renderToBase64PNG(design.document);
+    const png = renderToBase64PNG(design.document, scale);
     const buffer = Buffer.from(png, 'base64');
     res.setHeader('Content-Type', 'image/png');
     res.send(buffer);

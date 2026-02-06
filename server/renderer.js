@@ -117,13 +117,13 @@ function escapeXml(str) {
 }
 
 // Render document to PNG buffer
-export function renderToPNG(doc) {
+export function renderToPNG(doc, scale = 1) {
   const svgString = renderToSVGString(doc);
 
   const resvg = new Resvg(svgString, {
-    fitTo: {
-      mode: 'original',
-    },
+    fitTo: scale === 1
+      ? { mode: 'original' }
+      : { mode: 'zoom', value: scale },
     font: {
       loadSystemFonts: true,
     },
@@ -133,8 +133,8 @@ export function renderToPNG(doc) {
   return pngData.asPng();
 }
 
-// Render to base64 PNG for API
-export function renderToBase64PNG(doc) {
-  const pngBuffer = renderToPNG(doc);
+// Render to base64 PNG for API (thumbnails use 1x, exports use higher)
+export function renderToBase64PNG(doc, scale = 1) {
+  const pngBuffer = renderToPNG(doc, scale);
   return pngBuffer.toString('base64');
 }

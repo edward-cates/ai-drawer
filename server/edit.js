@@ -8,13 +8,13 @@ const client = new Anthropic();
 
 const EDIT_TOOL = {
   name: 'edit_design',
-  description: 'Edit an existing design by applying patches',
+  description: 'Edit a design. You MUST include at least one patch. Do NOT return an empty patches array.',
   input_schema: {
     type: 'object',
     properties: {
       thinking: {
         type: 'string',
-        description: 'What you see and what changes you will make',
+        description: 'Brief note on what you will change (1-2 sentences max)',
       },
       message: {
         type: 'string',
@@ -22,7 +22,8 @@ const EDIT_TOOL = {
       },
       patches: {
         type: 'array',
-        description: 'Patches to apply to the design',
+        description: 'REQUIRED: At least one patch. This array must NOT be empty.',
+        minItems: 1,
         items: {
           type: 'object',
           properties: {
@@ -45,18 +46,20 @@ const EDIT_TOOL = {
   },
 };
 
-const EDIT_SYSTEM_PROMPT = `You edit designs based on user requests. You MUST output patches to make changes.
+const EDIT_SYSTEM_PROMPT = `You edit designs. Your patches array MUST contain at least one patch. Never return empty patches.
 
-IMPORTANT: Always include at least one patch in your response. If you're unsure what to change, make your best attempt.
+DO NOT over-analyze. Just output the patches.
 
-Patch operations:
-- ADD: { op: "add", id: "new-id", element: { type: "rect|text|...", ...props } }
-- UPDATE: { op: "update", id: "existing-id", props: { ...changed props } }
-- REMOVE: { op: "remove", id: "existing-id" }
+Patch formats:
+- UPDATE: { op: "update", id: "element-id", props: { x: 100, y: 200, ... } }
+- ADD: { op: "add", id: "new-id", element: { type: "rect", x: 0, y: 0, width: 100, height: 50, fill: "#000" } }
+- REMOVE: { op: "remove", id: "element-id" }
 
-Keep your thinking brief. Focus on outputting the patches, not analyzing every detail.
+If the user asks to move/resize elements, use UPDATE with new coordinates.
+If the user asks to add something, use ADD.
+If the user asks to remove something, use REMOVE.
 
-Colors are hex "#rrggbb". Coordinates are pixels from top-left.`;
+Colors: "#rrggbb". Coordinates: pixels from top-left.`;
 
 function log(msg) {
   console.log(`[edit] ${msg}`);
@@ -116,7 +119,7 @@ User request: ${prompt}`,
   emit('status', 'Sending to AI...');
 
   // Use streaming to show progress
-  const stream = await client.messages.stream({
+  const stream = client.messages.stream({
     model: 'claude-opus-4-5-20251101',
     max_tokens: 4096,
     system: EDIT_SYSTEM_PROMPT,
@@ -128,14 +131,17 @@ User request: ${prompt}`,
     ],
   });
 
-  let dotCount = 0;
-  const thinkingInterval = setInterval(() => {
-    dotCount = (dotCount + 1) % 4;
-    emit('status', 'AI is thinking' + '.'.repeat(dotCount + 1));
-  }, 500);
+  // Stream actual AI output
+  let streamedText = '';
+  stream.on('text', (text) => {
+    streamedText += text;
+    // Show last 100 chars of streamed text
+    const preview = streamedText.slice(-100).replace(/\n/g, ' ');
+    emit('status', `AI: ${preview}`);
+    log(`[stream] ${text}`);
+  });
 
   const response = await stream.finalMessage();
-  clearInterval(thinkingInterval);
 
   emit('status', 'AI responded');
 
