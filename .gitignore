@@ -6,3 +6,5 @@ node_modules/
 test-match-output.json
 test-match-output.png
 eng.traineddata
+test-results/
+playwright-report/
