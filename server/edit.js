@@ -143,8 +143,8 @@ User request: ${prompt}`,
   }
 
   const result = toolUse.input;
-  emit('thinking', result.thinking);
-  emit('status', `Changes: ${result.patches.length} patches`);
+  emit('thinking', result.thinking || 'Analyzing...');
+  emit('status', `Changes: ${result.patches?.length || 0} patches`);
 
   // Validate and apply patches
   if (result.patches && result.patches.length > 0) {
