@@ -45,13 +45,16 @@ const EDIT_TOOL = {
   },
 };
 
-const EDIT_SYSTEM_PROMPT = `You edit designs based on user requests. You can see the current design as an image.
+const EDIT_SYSTEM_PROMPT = `You edit designs based on user requests. You MUST output patches to make changes.
 
-Look at the image carefully, then make the requested changes using patches:
+IMPORTANT: Always include at least one patch in your response. If you're unsure what to change, make your best attempt.
+
+Patch operations:
 - ADD: { op: "add", id: "new-id", element: { type: "rect|text|...", ...props } }
 - UPDATE: { op: "update", id: "existing-id", props: { ...changed props } }
-- UPDATE canvas: { op: "update", id: "canvas", props: { background: "#hex" } }
 - REMOVE: { op: "remove", id: "existing-id" }
+
+Keep your thinking brief. Focus on outputting the patches, not analyzing every detail.
 
 Colors are hex "#rrggbb". Coordinates are pixels from top-left.`;
 
@@ -179,7 +182,10 @@ User request: ${prompt}`,
   emit('status', 'Rendering...');
 
   if (appliedCount === 0) {
-    emit('complete', result.message || 'No changes made');
+    const noChangeMsg = (result.patches?.length || 0) === 0
+      ? 'AI returned no changes. Try rephrasing your request.'
+      : 'All changes were invalid. Try a simpler edit.';
+    emit('complete', noChangeMsg);
     log('Warning: No patches were applied');
   } else {
     emit('complete', result.message || `Applied ${appliedCount} changes`);
