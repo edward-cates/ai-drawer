@@ -25,7 +25,9 @@
       "Bash(supabase link:*)",
       "Bash(supabase db push:*)",
       "Bash(supabase:*)",
-      "Bash(render logs:*)"
+      "Bash(render logs:*)",
+      "Bash(npx playwright install:*)",
+      "Bash(npm run test:e2e:*)"
     ]
   }
 }
