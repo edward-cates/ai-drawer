@@ -517,5 +517,34 @@ promptInput.addEventListener('keydown', (e) => {
   }
 });
 
+// Export PNG
+const exportBtn = document.getElementById('export-btn');
+exportBtn.addEventListener('click', async () => {
+  if (!currentDesign) return;
+
+  try {
+    exportBtn.textContent = 'Exporting...';
+    exportBtn.disabled = true;
+
+    const res = await apiFetch(`/api/designs/${currentDesign.id}/render`);
+    if (!res.ok) throw new Error('Export failed');
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${currentDesign.name || 'design'}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    setStatus('Export failed: ' + err.message, true);
+  } finally {
+    exportBtn.textContent = 'Export PNG';
+    exportBtn.disabled = false;
+  }
+});
+
 // Start
 init();
