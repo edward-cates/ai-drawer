@@ -604,8 +604,6 @@ historyModal.addEventListener('click', (e) => {
 async function revertToVersion(versionId) {
   if (!currentDesign) return;
 
-  if (!confirm('Revert to this version? Current state will be saved to history.')) return;
-
   try {
     const res = await apiFetch(`/api/designs/${currentDesign.id}/revert/${versionId}`, {
       method: 'POST',

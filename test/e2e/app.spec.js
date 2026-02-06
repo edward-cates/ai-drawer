@@ -149,7 +149,7 @@ test.describe('AI Drawer', () => {
     await page.click('#history-btn');
     await expect(page.locator('.version-item')).toHaveCount(1);
 
-    page.on('dialog', dialog => dialog.accept());
+    // No confirmation needed - just click to switch
     await page.click('.version-item');
 
     // Should show revert message

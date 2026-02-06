@@ -195,22 +195,13 @@ app.get('/api/designs/:id/versions', (req, res) => {
   res.json(designVersions);
 });
 
-// Revert to version
+// Switch to version (doesn't modify history)
 app.post('/api/designs/:id/revert/:versionId', (req, res) => {
   const design = designs.find(d => d.id === req.params.id);
   const version = versions.find(v => v.id === req.params.versionId);
   if (!design || !version) return res.status(404).json({ error: 'Not found' });
 
-  // Save current as version
-  versions.push({
-    id: uuid(),
-    design_id: design.id,
-    document: JSON.parse(JSON.stringify(design.document)),
-    thumbnail: design.thumbnail,
-    created_at: new Date().toISOString(),
-  });
-
-  // Revert
+  // Just switch - no new history entry
   design.document = JSON.parse(JSON.stringify(version.document));
   design.thumbnail = version.thumbnail;
 

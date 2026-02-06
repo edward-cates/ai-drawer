@@ -280,7 +280,7 @@ app.get('/api/designs/:id/versions', requireAuth, async (req, res) => {
   res.json(versions);
 });
 
-// Revert to a specific version
+// Switch to a specific version (doesn't modify history)
 app.post('/api/designs/:id/revert/:versionId', requireAuth, async (req, res) => {
   const design = await getDesign(req.params.id, req.user.id);
   if (!design) {
@@ -292,10 +292,7 @@ app.post('/api/designs/:id/revert/:versionId', requireAuth, async (req, res) => 
     return res.status(404).json({ error: 'Version not found' });
   }
 
-  // Save current state as a version before reverting
-  await saveVersion(req.params.id, req.user.id, design.document, design.thumbnail);
-
-  // Revert to the selected version
+  // Just switch to this version - no new history entry
   await updateDesign(req.params.id, req.user.id, {
     document: version.document,
     thumbnail: version.thumbnail,
