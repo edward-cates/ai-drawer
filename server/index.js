@@ -1,42 +1,61 @@
 import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { v4 as uuidv4 } from 'uuid';
 import { matchImage } from './match.js';
 import { editDesign } from './edit.js';
 import { createFromDescription } from './create.js';
-import { createEmptyDocument } from '../shared/schema.js';
 import { renderToBase64PNG } from './renderer.js';
+import { supabase, getDesigns, getDesign, createDesign, updateDesign, deleteDesign, getUser } from './db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// In-memory design library (replace with DB for production)
-const designs = new Map();
-
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(join(__dirname, '../client')));
 
-// Get all designs (library)
-app.get('/api/designs', (req, res) => {
-  const list = [];
-  for (const [id, design] of designs) {
-    list.push({
-      id,
-      name: design.name,
-      thumbnail: design.thumbnail,
-      createdAt: design.createdAt,
-      updatedAt: design.updatedAt,
-    });
+// Auth middleware - extracts user from Authorization header
+async function authMiddleware(req, res, next) {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader?.startsWith('Bearer ')) {
+    req.user = null;
+    return next();
   }
-  list.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-  res.json(list);
+
+  const token = authHeader.slice(7);
+  const user = await getUser(token);
+  req.user = user;
+  next();
+}
+
+// Require auth middleware
+function requireAuth(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  next();
+}
+
+app.use(authMiddleware);
+
+// Get Supabase config for client
+app.get('/api/config', (req, res) => {
+  res.json({
+    supabaseUrl: process.env.SUPABASE_URL || 'https://staukauuowzlrooepwfo.supabase.co',
+    supabaseAnonKey: process.env.SUPABASE_ANON_KEY || '',
+  });
+});
+
+// Get all designs (library)
+app.get('/api/designs', requireAuth, async (req, res) => {
+  const designs = await getDesigns(req.user.id);
+  res.json(designs);
 });
 
 // Get a single design
-app.get('/api/designs/:id', (req, res) => {
-  const design = designs.get(req.params.id);
+app.get('/api/designs/:id', requireAuth, async (req, res) => {
+  const design = await getDesign(req.params.id, req.user.id);
   if (!design) {
     return res.status(404).json({ error: 'Design not found' });
   }
@@ -44,13 +63,12 @@ app.get('/api/designs/:id', (req, res) => {
 });
 
 // Create new design from description (SSE)
-app.post('/api/designs/from-description', async (req, res) => {
+app.post('/api/designs/from-description', requireAuth, async (req, res) => {
   const { description } = req.body;
   if (!description) {
     return res.status(400).json({ error: 'Missing description' });
   }
 
-  // Set up SSE
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
@@ -58,9 +76,6 @@ app.post('/api/designs/from-description', async (req, res) => {
   const sendEvent = (data) => {
     res.write(`data: ${JSON.stringify(data)}\n\n`);
   };
-
-  const id = uuidv4();
-  const now = new Date().toISOString();
 
   try {
     const result = await createFromDescription(description, (progress) => {
@@ -74,21 +89,17 @@ app.post('/api/designs/from-description', async (req, res) => {
       console.error('Thumbnail render failed:', err);
     }
 
-    const design = {
-      id,
-      name: result.name || 'Untitled',
-      document: result.document,
-      thumbnail,
-      history: [],
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    designs.set(id, design);
+    // Save to database
+    const design = await createDesign(
+      req.user.id,
+      result.name || 'Untitled',
+      result.document,
+      thumbnail
+    );
 
     sendEvent({
       type: 'done',
-      id,
+      id: design.id,
       name: design.name,
       thumbnail,
       document: design.document,
@@ -102,7 +113,7 @@ app.post('/api/designs/from-description', async (req, res) => {
 });
 
 // Create new design from image (SSE)
-app.post('/api/designs/from-image', async (req, res) => {
+app.post('/api/designs/from-image', requireAuth, async (req, res) => {
   const { image } = req.body;
   if (!image) {
     return res.status(400).json({ error: 'Missing image' });
@@ -115,9 +126,6 @@ app.post('/api/designs/from-image', async (req, res) => {
   const sendEvent = (data) => {
     res.write(`data: ${JSON.stringify(data)}\n\n`);
   };
-
-  const id = uuidv4();
-  const now = new Date().toISOString();
 
   try {
     let base64Data = image;
@@ -139,21 +147,17 @@ app.post('/api/designs/from-image', async (req, res) => {
       console.error('Thumbnail render failed:', err);
     }
 
-    const design = {
-      id,
-      name: 'Matched Design',
-      document: result.document,
-      thumbnail,
-      history: [],
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    designs.set(id, design);
+    // Save to database
+    const design = await createDesign(
+      req.user.id,
+      'Matched Design',
+      result.document,
+      thumbnail
+    );
 
     sendEvent({
       type: 'done',
-      id,
+      id: design.id,
       name: design.name,
       thumbnail,
       document: design.document,
@@ -167,10 +171,10 @@ app.post('/api/designs/from-image', async (req, res) => {
 });
 
 // Edit a design with natural language (SSE)
-app.post('/api/designs/:id/edit', async (req, res) => {
+app.post('/api/designs/:id/edit', requireAuth, async (req, res) => {
   const { prompt } = req.body;
-  const design = designs.get(req.params.id);
 
+  const design = await getDesign(req.params.id, req.user.id);
   if (!design) {
     return res.status(404).json({ error: 'Design not found' });
   }
@@ -187,30 +191,27 @@ app.post('/api/designs/:id/edit', async (req, res) => {
   };
 
   try {
-    const result = await editDesign(design.document, prompt, design.history, (progress) => {
+    const result = await editDesign(design.document, prompt, [], (progress) => {
       sendEvent(progress);
     });
 
-    // Update design
-    design.document = result.document;
-    design.history.push({ role: 'user', content: prompt });
-    design.history.push({ role: 'assistant', content: result.response });
-    design.updatedAt = new Date().toISOString();
-
-    if (design.history.length > 20) {
-      design.history = design.history.slice(-20);
-    }
-
+    let thumbnail = null;
     try {
-      design.thumbnail = `data:image/png;base64,${renderToBase64PNG(design.document)}`;
+      thumbnail = `data:image/png;base64,${renderToBase64PNG(result.document)}`;
     } catch (err) {
       console.error('Thumbnail render failed:', err);
     }
 
+    // Update in database
+    await updateDesign(req.params.id, req.user.id, {
+      document: result.document,
+      thumbnail,
+    });
+
     sendEvent({
       type: 'done',
-      document: design.document,
-      thumbnail: design.thumbnail,
+      document: result.document,
+      thumbnail,
       message: result.message,
     });
   } catch (err) {
@@ -222,32 +223,31 @@ app.post('/api/designs/:id/edit', async (req, res) => {
 });
 
 // Rename a design
-app.patch('/api/designs/:id', (req, res) => {
-  const design = designs.get(req.params.id);
+app.patch('/api/designs/:id', requireAuth, async (req, res) => {
+  const design = await getDesign(req.params.id, req.user.id);
   if (!design) {
     return res.status(404).json({ error: 'Design not found' });
   }
 
   if (req.body.name) {
-    design.name = req.body.name;
-    design.updatedAt = new Date().toISOString();
+    await updateDesign(req.params.id, req.user.id, { name: req.body.name });
   }
 
-  res.json({ id: design.id, name: design.name });
+  res.json({ id: design.id, name: req.body.name || design.name });
 });
 
 // Delete a design
-app.delete('/api/designs/:id', (req, res) => {
-  if (!designs.has(req.params.id)) {
+app.delete('/api/designs/:id', requireAuth, async (req, res) => {
+  const success = await deleteDesign(req.params.id, req.user.id);
+  if (!success) {
     return res.status(404).json({ error: 'Design not found' });
   }
-  designs.delete(req.params.id);
   res.json({ success: true });
 });
 
 // Render a design to PNG
-app.get('/api/designs/:id/render', (req, res) => {
-  const design = designs.get(req.params.id);
+app.get('/api/designs/:id/render', requireAuth, async (req, res) => {
+  const design = await getDesign(req.params.id, req.user.id);
   if (!design) {
     return res.status(404).json({ error: 'Design not found' });
   }
@@ -263,5 +263,5 @@ app.get('/api/designs/:id/render', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`AI Design server running at http://localhost:${PORT}`);
+  console.log(`AI Drawer server running at http://localhost:${PORT}`);
 });

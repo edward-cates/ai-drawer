@@ -1,9 +1,19 @@
 import { renderToSVG } from './renderer.js';
 
+let supabase = null;
+let currentUser = null;
+let accessToken = null;
 let currentDesign = null;
 let designs = [];
 
 // Elements
+const loginScreen = document.getElementById('login-screen');
+const app = document.getElementById('app');
+const googleLoginBtn = document.getElementById('google-login');
+const logoutBtn = document.getElementById('logout-btn');
+const userAvatar = document.getElementById('user-avatar');
+const userEmail = document.getElementById('user-email');
+
 const designList = document.getElementById('design-list');
 const canvasArea = document.getElementById('canvas-area');
 const promptBar = document.getElementById('prompt-bar');
@@ -32,15 +42,114 @@ let selectedImage = null;
 
 // Initialize
 async function init() {
-  await loadDesigns();
+  // Get Supabase config from server
+  try {
+    const res = await fetch('/api/config');
+    const config = await res.json();
+
+    if (config.supabaseUrl && config.supabaseAnonKey) {
+      supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+
+      // Check for existing session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        handleAuthChange(session);
+      }
+
+      // Listen for auth changes
+      supabase.auth.onAuthStateChange((event, session) => {
+        handleAuthChange(session);
+      });
+    } else {
+      console.warn('Supabase not configured, running in demo mode');
+      showApp();
+    }
+  } catch (err) {
+    console.error('Failed to init:', err);
+    showApp();
+  }
+}
+
+function handleAuthChange(session) {
+  if (session) {
+    currentUser = session.user;
+    accessToken = session.access_token;
+    showApp();
+    updateUserInfo();
+    loadDesigns();
+  } else {
+    currentUser = null;
+    accessToken = null;
+    showLogin();
+  }
+}
+
+function showLogin() {
+  loginScreen.style.display = 'flex';
+  app.classList.remove('visible');
+}
+
+function showApp() {
+  loginScreen.style.display = 'none';
+  app.classList.add('visible');
+}
+
+function updateUserInfo() {
+  if (currentUser) {
+    userEmail.textContent = currentUser.email;
+    userAvatar.src = currentUser.user_metadata?.avatar_url || '';
+  }
+}
+
+// Auth handlers
+googleLoginBtn.addEventListener('click', async () => {
+  if (!supabase) return;
+
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin,
+    },
+  });
+
+  if (error) {
+    console.error('Login error:', error);
+  }
+});
+
+logoutBtn.addEventListener('click', async () => {
+  if (!supabase) return;
+
+  await supabase.auth.signOut();
+  currentDesign = null;
+  designs = [];
+  renderDesignList();
+  renderCanvas();
+  promptBar.style.display = 'none';
+});
+
+// API helpers
+async function apiFetch(url, options = {}) {
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(options.headers || {}),
+  };
+
+  if (accessToken) {
+    headers['Authorization'] = `Bearer ${accessToken}`;
+  }
+
+  return fetch(url, { ...options, headers });
 }
 
 // Load designs from server
 async function loadDesigns() {
   try {
-    const res = await fetch('/api/designs');
-    designs = await res.json();
-    renderDesignList();
+    const res = await apiFetch('/api/designs');
+    if (res.ok) {
+      designs = await res.json();
+      renderDesignList();
+    }
   } catch (err) {
     console.error('Failed to load designs:', err);
   }
@@ -71,12 +180,14 @@ function renderDesignList() {
 // Select a design
 async function selectDesign(id) {
   try {
-    const res = await fetch(`/api/designs/${id}`);
-    currentDesign = await res.json();
-    renderDesignList();
-    renderCanvas();
-    promptBar.style.display = 'block';
-    setStatus('');
+    const res = await apiFetch(`/api/designs/${id}`);
+    if (res.ok) {
+      currentDesign = await res.json();
+      renderDesignList();
+      renderCanvas();
+      promptBar.style.display = 'block';
+      setStatus('');
+    }
   } catch (err) {
     console.error('Failed to load design:', err);
   }
@@ -87,7 +198,7 @@ function renderCanvas() {
   if (!currentDesign) {
     canvasArea.innerHTML = `
       <div class="welcome">
-        <h2>Welcome to AI Design</h2>
+        <h2>Welcome to AI Drawer</h2>
         <p>Create a new design to get started</p>
       </div>
     `;
@@ -135,9 +246,14 @@ function logProgress(msg, type = 'info') {
 
 // Stream SSE response
 async function streamSSE(url, body, onEvent) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (accessToken) {
+    headers['Authorization'] = `Bearer ${accessToken}`;
+  }
+
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(body),
   });
 

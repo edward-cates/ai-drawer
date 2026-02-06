@@ -16,7 +16,15 @@
       "Bash(git commit:*)",
       "Bash(gh repo create:*)",
       "Bash(git rm:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(wrangler whoami:*)",
+      "Bash(wrangler dns records list:*)",
+      "Bash(wrangler:*)",
+      "Bash(supabase projects:*)",
+      "Bash(supabase orgs list:*)",
+      "Bash(supabase link:*)",
+      "Bash(supabase db push:*)",
+      "Bash(supabase:*)"
     ]
   }
 }
