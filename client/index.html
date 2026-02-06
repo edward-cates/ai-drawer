@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Design</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a1a;
+      color: #e5e5e5;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .app {
+      display: flex;
+      height: 100vh;
+    }
+
+    /* Left sidebar */
+    .sidebar {
+      width: 260px;
+      background: #252525;
+      border-right: 1px solid #333;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid #333;
+    }
+
+    .sidebar-header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .create-btn {
+      width: 100%;
+      padding: 10px 16px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .create-btn:hover { background: #2563eb; }
+
+    .design-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .design-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-bottom: 4px;
+    }
+
+    .design-item:hover { background: #333; }
+    .design-item.active { background: #3b82f6; }
+
+    .design-thumb {
+      width: 48px;
+      height: 36px;
+      background: #333;
+      border-radius: 4px;
+      object-fit: cover;
+    }
+
+    .design-name {
+      flex: 1;
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .empty-state {
+      padding: 20px;
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+    }
+
+    /* Main area */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #1a1a1a;
+    }
+
+    .canvas-area {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      overflow: auto;
+    }
+
+    .canvas-container {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+
+    .canvas-container img,
+    .canvas-container svg {
+      display: block;
+      max-width: 100%;
+      max-height: calc(100vh - 200px);
+    }
+
+    .welcome {
+      text-align: center;
+      color: #666;
+    }
+
+    .welcome h2 {
+      font-size: 24px;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+
+    /* Prompt bar */
+    .prompt-bar {
+      padding: 16px 24px;
+      background: #252525;
+      border-top: 1px solid #333;
+    }
+
+    .prompt-form {
+      display: flex;
+      gap: 12px;
+    }
+
+    .prompt-input {
+      flex: 1;
+      padding: 12px 16px;
+      background: #333;
+      border: 1px solid #444;
+      border-radius: 8px;
+      color: #e5e5e5;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .prompt-input:focus { border-color: #3b82f6; }
+
+    .prompt-input::placeholder { color: #666; }
+
+    .send-btn {
+      padding: 12px 24px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .send-btn:hover { background: #2563eb; }
+    .send-btn:disabled { background: #444; cursor: not-allowed; }
+
+    .status {
+      margin-top: 8px;
+      font-size: 13px;
+      color: #666;
+    }
+
+    .status.error { color: #ef4444; }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: #252525;
+      border-radius: 12px;
+      padding: 24px;
+      width: 400px;
+      max-width: 90vw;
+    }
+
+    .modal h2 {
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+
+    .modal-options {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .modal-option {
+      padding: 16px;
+      background: #333;
+      border: 2px solid #444;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .modal-option:hover { border-color: #3b82f6; }
+
+    .modal-option h3 {
+      font-size: 15px;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .modal-option p {
+      font-size: 13px;
+      color: #888;
+    }
+
+    .modal-input-area {
+      display: none;
+      margin-top: 20px;
+    }
+
+    .modal-input-area.open { display: block; }
+
+    .modal-input-area textarea {
+      width: 100%;
+      padding: 12px;
+      background: #333;
+      border: 1px solid #444;
+      border-radius: 8px;
+      color: #e5e5e5;
+      font-size: 14px;
+      resize: vertical;
+      min-height: 100px;
+      outline: none;
+    }
+
+    .modal-input-area textarea:focus { border-color: #3b82f6; }
+
+    .modal-input-area input[type="file"] { display: none; }
+
+    .file-label {
+      display: block;
+      padding: 40px;
+      background: #333;
+      border: 2px dashed #444;
+      border-radius: 8px;
+      text-align: center;
+      cursor: pointer;
+      color: #888;
+    }
+
+    .file-label:hover { border-color: #3b82f6; }
+
+    .file-label.has-file {
+      border-style: solid;
+      border-color: #3b82f6;
+      color: #e5e5e5;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+      justify-content: flex-end;
+    }
+
+    .modal-actions button {
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .btn-cancel {
+      background: transparent;
+      border: 1px solid #444;
+      color: #888;
+    }
+
+    .btn-cancel:hover { background: #333; }
+
+    .btn-create {
+      background: #3b82f6;
+      border: none;
+      color: white;
+    }
+
+    .btn-create:hover { background: #2563eb; }
+    .btn-create:disabled { background: #444; cursor: not-allowed; }
+
+    /* Progress overlay */
+    .progress-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+
+    .progress-overlay.open { display: flex; }
+
+    .progress-box {
+      background: #252525;
+      border-radius: 12px;
+      padding: 32px;
+      text-align: center;
+      min-width: 300px;
+    }
+
+    .progress-box h3 {
+      margin-bottom: 16px;
+    }
+
+    .progress-log {
+      max-height: 200px;
+      overflow-y: auto;
+      text-align: left;
+      font-size: 13px;
+      color: #888;
+      margin-top: 16px;
+    }
+
+    .progress-log div {
+      padding: 4px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1>AI Design</h1>
+        <button class="create-btn" id="create-btn">+ Create New</button>
+      </div>
+      <div class="design-list" id="design-list">
+        <div class="empty-state">No designs yet</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="canvas-area" id="canvas-area">
+        <div class="welcome">
+          <h2>Welcome to AI Design</h2>
+          <p>Create a new design to get started</p>
+        </div>
+      </div>
+
+      <div class="prompt-bar" id="prompt-bar" style="display: none;">
+        <form class="prompt-form" id="prompt-form">
+          <input type="text" class="prompt-input" id="prompt-input" placeholder="Describe what you want to change...">
+          <button type="submit" class="send-btn" id="send-btn">Send</button>
+        </form>
+        <div class="status" id="status"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Create Modal -->
+  <div class="modal-overlay" id="create-modal">
+    <div class="modal">
+      <h2>Create New Design</h2>
+      <div class="modal-options" id="modal-options">
+        <div class="modal-option" data-type="description">
+          <h3>From Description</h3>
+          <p>Describe what you want to create</p>
+        </div>
+        <div class="modal-option" data-type="image">
+          <h3>From Image</h3>
+          <p>Upload an image to recreate</p>
+        </div>
+      </div>
+
+      <div class="modal-input-area" id="description-input">
+        <textarea placeholder="Describe the design you want to create..."></textarea>
+      </div>
+
+      <div class="modal-input-area" id="image-input-area">
+        <label class="file-label" id="file-label">
+          <input type="file" id="image-input" accept="image/*">
+          Drop an image or click to upload
+        </label>
+      </div>
+
+      <div class="modal-actions" id="modal-actions" style="display: none;">
+        <button class="btn-cancel" id="modal-cancel">Cancel</button>
+        <button class="btn-create" id="modal-create">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress Overlay -->
+  <div class="progress-overlay" id="progress-overlay">
+    <div class="progress-box">
+      <h3 id="progress-title">Creating design...</h3>
+      <div class="progress-log" id="progress-log"></div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
