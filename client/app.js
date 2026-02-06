@@ -144,14 +144,20 @@ async function apiFetch(url, options = {}) {
 
 // Load designs from server
 async function loadDesigns() {
+  // Show loading state
+  designList.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading...</div>';
+
   try {
     const res = await apiFetch('/api/designs');
     if (res.ok) {
       designs = await res.json();
       renderDesignList();
+    } else {
+      designList.innerHTML = '<div class="empty-state">Failed to load designs</div>';
     }
   } catch (err) {
     console.error('Failed to load designs:', err);
+    designList.innerHTML = '<div class="empty-state">Failed to load designs</div>';
   }
 }
 

@@ -143,6 +143,26 @@
       font-size: 14px;
     }
 
+    .loading-state {
+      padding: 40px 20px;
+      text-align: center;
+      color: #666;
+    }
+
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 2px solid #444;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 12px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
     .user-info {
       padding: 12px 16px;
       border-top: 1px solid #333;
@@ -221,7 +241,7 @@
 
     /* Prompt bar */
     .prompt-bar {
-      padding: 16px 24px;
+      padding: 20px 24px;
       background: #252525;
       border-top: 1px solid #333;
     }
@@ -233,12 +253,12 @@
 
     .prompt-input {
       flex: 1;
-      padding: 12px 16px;
+      padding: 14px 18px;
       background: #333;
       border: 1px solid #444;
       border-radius: 8px;
       color: #e5e5e5;
-      font-size: 14px;
+      font-size: 15px;
       outline: none;
     }
 
@@ -330,14 +350,15 @@
 
     .modal-input-area textarea {
       width: 100%;
-      padding: 12px;
+      padding: 16px;
       background: #333;
       border: 1px solid #444;
       border-radius: 8px;
       color: #e5e5e5;
-      font-size: 14px;
+      font-size: 15px;
+      line-height: 1.5;
       resize: vertical;
-      min-height: 100px;
+      min-height: 160px;
       outline: none;
     }
 
