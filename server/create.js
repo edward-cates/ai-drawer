@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { applyPatches, createEmptyDocument } from '../shared/schema.js';
 import { validatePatches } from './validate.js';
 import { getAllPalettesForPrompt } from '../shared/palettes.js';
+import { ICON_NAMES } from '../shared/icons.js';
 
 const client = new Anthropic();
 
@@ -140,9 +141,10 @@ Glow effect:
 - glow: { blur: 8, color: "#3b82f6", opacity: 0.6 }
 - Use for highlights, buttons, neon effects
 
-Icons (Lucide library):
+Icons (Lucide library) - ONLY use icons from this exact list:
 - { type: "icon", name: "check", x: 10, y: 10, size: 24, color: "#000" }
-- Common icons: check, x, plus, minus, arrow-left, arrow-right, arrow-up, arrow-down, chevron-left, chevron-right, home, search, settings, user, bell, mail, heart, star, play, pause, download, upload, trash, edit, share, link, shopping-cart, credit-card, alert-circle, check-circle, sun, moon, lock, eye, refresh-cw, external-link, menu, filter, layers
+- Available icons: ${ICON_NAMES.join(', ')}
+- Do NOT use any icon names not in the list above.
 
 Use gradients for backgrounds and buttons. Use shadows for cards and depth. Use glow for emphasis. Use icons for UI elements and actions.`;
 

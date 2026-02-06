@@ -4,6 +4,7 @@ import { applyPatches } from '../shared/schema.js';
 import { renderToBase64PNG } from './renderer.js';
 import { validatePatches, generateSchemaDoc } from './validate.js';
 import { getAllPalettesForPrompt } from '../shared/palettes.js';
+import { ICON_NAMES } from '../shared/icons.js';
 
 const client = new Anthropic();
 
@@ -73,9 +74,9 @@ Blur:
 Glow:
 - glow: { blur: 8, color: "#3b82f6", opacity: 0.6 }
 
-Icons:
+Icons - ONLY use these exact names:
 - { type: "icon", name: "check", x: 10, y: 10, size: 24, color: "#000" }
-- Names: check, x, plus, minus, arrow-*, chevron-*, home, search, settings, user, bell, mail, heart, star, play, pause, download, upload, trash, edit, share, link, shopping-cart, alert-circle, check-circle, sun, moon, lock, eye, menu, filter, layers
+- Available: ${ICON_NAMES.join(', ')}
 
 Coordinates: pixels from top-left.
 

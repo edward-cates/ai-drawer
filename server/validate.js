@@ -1,5 +1,6 @@
 // Patch validation - validate patches before applying to catch errors early
 import { ELEMENT_TYPES, PATCH_OPS } from '../shared/schema.js';
+import { ICON_NAMES } from '../shared/icons.js';
 
 const VALID_ELEMENT_TYPES = Object.values(ELEMENT_TYPES);
 
@@ -229,7 +230,7 @@ Optional: fontSize, fontFamily, fontWeight, fill, opacity, textAnchor, shadow, b
 ### icon (Lucide icons)
 Required: name, x, y, size
 Optional: color, opacity, rotation, shadow, glow
-Available icons: arrow-left, arrow-right, arrow-up, arrow-down, chevron-left, chevron-right, chevron-up, chevron-down, menu, x, check, plus, minus, home, search, settings, user, users, bell, mail, phone, calendar, clock, heart, star, bookmark, image, camera, video, play, pause, music, file, folder, download, upload, trash, edit, copy, clipboard, message-circle, send, share, link, shopping-cart, shopping-bag, credit-card, dollar-sign, alert-circle, alert-triangle, info, check-circle, x-circle, zap, sun, moon, cloud, globe, lock, unlock, eye, eye-off, refresh-cw, external-link, filter, layers
+Available icons: ${ICON_NAMES.join(', ')}
 
 ### group
 Required: children (array of element ids)
