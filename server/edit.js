@@ -143,10 +143,19 @@ User request: ${prompt}`,
   }
 
   const result = toolUse.input;
+  log(`AI result: thinking=${!!result.thinking}, message=${result.message}, patches=${result.patches?.length || 0}`);
+
+  if (result.patches) {
+    for (const p of result.patches) {
+      log(`  Patch: op=${p.op} id=${p.id}`);
+    }
+  }
+
   emit('thinking', result.thinking || 'Analyzing...');
   emit('status', `Changes: ${result.patches?.length || 0} patches`);
 
   // Validate and apply patches
+  let appliedCount = 0;
   if (result.patches && result.patches.length > 0) {
     emit('status', 'Validating patches...');
     const results = validatePatches(result.patches, document);
@@ -160,15 +169,21 @@ User request: ${prompt}`,
       }
     }
 
-    emit('status', `Applying ${valid.length} changes...`);
-
     if (valid.length > 0) {
+      emit('status', `Applying ${valid.length} changes...`);
       document = applyPatches(document, valid);
+      appliedCount = valid.length;
     }
   }
 
   emit('status', 'Rendering...');
-  emit('complete', result.message || 'Done');
+
+  if (appliedCount === 0) {
+    emit('complete', result.message || 'No changes made');
+    log('Warning: No patches were applied');
+  } else {
+    emit('complete', result.message || `Applied ${appliedCount} changes`);
+  }
 
   return {
     document,
