@@ -520,6 +520,11 @@ promptInput.addEventListener('keydown', (e) => {
 // Export PNG
 const exportBtn = document.getElementById('export-btn');
 const duplicateBtn = document.getElementById('duplicate-btn');
+const deleteBtn = document.getElementById('delete-btn');
+const historyBtn = document.getElementById('history-btn');
+const historyModal = document.getElementById('history-modal');
+const historyClose = document.getElementById('history-close');
+const versionList = document.getElementById('version-list');
 exportBtn.addEventListener('click', async () => {
   if (!currentDesign) return;
 
@@ -544,6 +549,99 @@ exportBtn.addEventListener('click', async () => {
   } finally {
     exportBtn.textContent = 'Export PNG';
     exportBtn.disabled = false;
+  }
+});
+
+// History
+historyBtn.addEventListener('click', async () => {
+  if (!currentDesign) return;
+
+  versionList.innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading...</div>';
+  historyModal.classList.add('open');
+
+  try {
+    const res = await apiFetch(`/api/designs/${currentDesign.id}/versions`);
+    if (!res.ok) throw new Error('Failed to load versions');
+
+    const versions = await res.json();
+
+    if (versions.length === 0) {
+      versionList.innerHTML = '<div class="empty-state">No previous versions</div>';
+      return;
+    }
+
+    versionList.innerHTML = versions.map(v => `
+      <div class="version-item" data-id="${v.id}">
+        ${v.thumbnail
+          ? `<img class="version-thumb" src="${v.thumbnail}" alt="">`
+          : '<div class="version-thumb"></div>'
+        }
+        <div class="version-time">
+          ${new Date(v.created_at).toLocaleString()}
+          <div class="version-label">Click to revert</div>
+        </div>
+      </div>
+    `).join('');
+
+    versionList.querySelectorAll('.version-item').forEach(item => {
+      item.addEventListener('click', () => revertToVersion(item.dataset.id));
+    });
+  } catch (err) {
+    versionList.innerHTML = `<div class="empty-state">Error: ${err.message}</div>`;
+  }
+});
+
+historyClose.addEventListener('click', () => {
+  historyModal.classList.remove('open');
+});
+
+historyModal.addEventListener('click', (e) => {
+  if (e.target === historyModal) {
+    historyModal.classList.remove('open');
+  }
+});
+
+async function revertToVersion(versionId) {
+  if (!currentDesign) return;
+
+  if (!confirm('Revert to this version? Current state will be saved to history.')) return;
+
+  try {
+    const res = await apiFetch(`/api/designs/${currentDesign.id}/revert/${versionId}`, {
+      method: 'POST',
+    });
+    if (!res.ok) throw new Error('Revert failed');
+
+    const data = await res.json();
+    currentDesign.document = data.document;
+    currentDesign.thumbnail = data.thumbnail;
+    renderCanvas();
+    renderDesignList();
+    historyModal.classList.remove('open');
+    setStatus('Reverted to previous version');
+  } catch (err) {
+    setStatus('Revert failed: ' + err.message, true);
+  }
+}
+
+// Delete design
+deleteBtn.addEventListener('click', async () => {
+  if (!currentDesign) return;
+
+  if (!confirm(`Delete "${currentDesign.name}"? This cannot be undone.`)) return;
+
+  try {
+    const res = await apiFetch(`/api/designs/${currentDesign.id}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error('Delete failed');
+
+    currentDesign = null;
+    await loadDesigns();
+    renderCanvas();
+    promptBar.style.display = 'none';
+  } catch (err) {
+    setStatus('Delete failed: ' + err.message, true);
   }
 });
 

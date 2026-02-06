@@ -112,6 +112,63 @@ export async function deleteDesign(id, userId) {
   return true;
 }
 
+// Version history
+export async function saveVersion(designId, userId, document, thumbnail) {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from('design_versions')
+    .insert({
+      design_id: designId,
+      user_id: userId,
+      document,
+      thumbnail,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error saving version:', error);
+    return null;
+  }
+  return data;
+}
+
+export async function getVersions(designId, userId) {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from('design_versions')
+    .select('id, created_at, thumbnail')
+    .eq('design_id', designId)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  if (error) {
+    console.error('Error fetching versions:', error);
+    return [];
+  }
+  return data;
+}
+
+export async function getVersion(versionId, userId) {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from('design_versions')
+    .select('*')
+    .eq('id', versionId)
+    .eq('user_id', userId)
+    .single();
+
+  if (error) {
+    console.error('Error fetching version:', error);
+    return null;
+  }
+  return data;
+}
+
 // Auth helpers
 export async function getUser(accessToken) {
   if (!supabase) return null;

@@ -5,7 +5,7 @@ import { matchImage } from './match.js';
 import { editDesign } from './edit.js';
 import { createFromDescription } from './create.js';
 import { renderToBase64PNG } from './renderer.js';
-import { supabase, getDesigns, getDesign, createDesign, updateDesign, deleteDesign, getUser, checkRateLimit, incrementUsage } from './db.js';
+import { supabase, getDesigns, getDesign, createDesign, updateDesign, deleteDesign, getUser, checkRateLimit, incrementUsage, saveVersion, getVersions, getVersion } from './db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -232,6 +232,9 @@ app.post('/api/designs/:id/edit', requireAuth, async (req, res) => {
   };
 
   try {
+    // Save current version before editing
+    await saveVersion(req.params.id, req.user.id, design.document, design.thumbnail);
+
     const result = await editDesign(design.document, prompt, [], (progress) => {
       sendEvent(progress);
     });
@@ -264,6 +267,44 @@ app.post('/api/designs/:id/edit', requireAuth, async (req, res) => {
   }
 
   res.end();
+});
+
+// Get version history for a design
+app.get('/api/designs/:id/versions', requireAuth, async (req, res) => {
+  const design = await getDesign(req.params.id, req.user.id);
+  if (!design) {
+    return res.status(404).json({ error: 'Design not found' });
+  }
+
+  const versions = await getVersions(req.params.id, req.user.id);
+  res.json(versions);
+});
+
+// Revert to a specific version
+app.post('/api/designs/:id/revert/:versionId', requireAuth, async (req, res) => {
+  const design = await getDesign(req.params.id, req.user.id);
+  if (!design) {
+    return res.status(404).json({ error: 'Design not found' });
+  }
+
+  const version = await getVersion(req.params.versionId, req.user.id);
+  if (!version || version.design_id !== req.params.id) {
+    return res.status(404).json({ error: 'Version not found' });
+  }
+
+  // Save current state as a version before reverting
+  await saveVersion(req.params.id, req.user.id, design.document, design.thumbnail);
+
+  // Revert to the selected version
+  await updateDesign(req.params.id, req.user.id, {
+    document: version.document,
+    thumbnail: version.thumbnail,
+  });
+
+  res.json({
+    document: version.document,
+    thumbnail: version.thumbnail,
+  });
 });
 
 // Rename a design
