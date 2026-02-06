@@ -5,7 +5,7 @@ import { matchImage } from './match.js';
 import { editDesign } from './edit.js';
 import { createFromDescription } from './create.js';
 import { renderToBase64PNG } from './renderer.js';
-import { supabase, getDesigns, getDesign, createDesign, updateDesign, deleteDesign, getUser } from './db.js';
+import { supabase, getDesigns, getDesign, createDesign, updateDesign, deleteDesign, getUser, checkRateLimit, incrementUsage } from './db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -62,11 +62,26 @@ app.get('/api/designs/:id', requireAuth, async (req, res) => {
   res.json(design);
 });
 
+// Check rate limit endpoint
+app.get('/api/usage', requireAuth, async (req, res) => {
+  const usage = await checkRateLimit(req.user.id);
+  res.json(usage);
+});
+
 // Create new design from description (SSE)
 app.post('/api/designs/from-description', requireAuth, async (req, res) => {
   const { description } = req.body;
   if (!description) {
     return res.status(400).json({ error: 'Missing description' });
+  }
+
+  // Check rate limit
+  const usage = await checkRateLimit(req.user.id);
+  if (!usage.allowed) {
+    return res.status(429).json({
+      error: 'Daily limit reached',
+      message: `You've used all ${usage.limit} prompts for today. Try again tomorrow.`
+    });
   }
 
   res.setHeader('Content-Type', 'text/event-stream');
@@ -97,6 +112,9 @@ app.post('/api/designs/from-description', requireAuth, async (req, res) => {
       thumbnail
     );
 
+    // Increment usage
+    await incrementUsage(req.user.id);
+
     sendEvent({
       type: 'done',
       id: design.id,
@@ -117,6 +135,15 @@ app.post('/api/designs/from-image', requireAuth, async (req, res) => {
   const { image } = req.body;
   if (!image) {
     return res.status(400).json({ error: 'Missing image' });
+  }
+
+  // Check rate limit (image matching uses 3 API calls, count as 3)
+  const usage = await checkRateLimit(req.user.id);
+  if (!usage.allowed) {
+    return res.status(429).json({
+      error: 'Daily limit reached',
+      message: `You've used all ${usage.limit} prompts for today. Try again tomorrow.`
+    });
   }
 
   res.setHeader('Content-Type', 'text/event-stream');
@@ -155,6 +182,11 @@ app.post('/api/designs/from-image', requireAuth, async (req, res) => {
       thumbnail
     );
 
+    // Increment usage (image matching uses 3 API calls)
+    await incrementUsage(req.user.id);
+    await incrementUsage(req.user.id);
+    await incrementUsage(req.user.id);
+
     sendEvent({
       type: 'done',
       id: design.id,
@@ -182,6 +214,15 @@ app.post('/api/designs/:id/edit', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'Missing prompt' });
   }
 
+  // Check rate limit
+  const usage = await checkRateLimit(req.user.id);
+  if (!usage.allowed) {
+    return res.status(429).json({
+      error: 'Daily limit reached',
+      message: `You've used all ${usage.limit} prompts for today. Try again tomorrow.`
+    });
+  }
+
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
@@ -207,6 +248,9 @@ app.post('/api/designs/:id/edit', requireAuth, async (req, res) => {
       document: result.document,
       thumbnail,
     });
+
+    // Increment usage
+    await incrementUsage(req.user.id);
 
     sendEvent({
       type: 'done',

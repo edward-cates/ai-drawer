@@ -116,3 +116,60 @@ export async function getUser(accessToken) {
   }
   return user;
 }
+
+// Usage/rate limiting
+const DAILY_PROMPT_LIMIT = 20;
+
+export async function checkRateLimit(userId) {
+  if (!supabase) return { allowed: true, remaining: DAILY_PROMPT_LIMIT };
+
+  const today = new Date().toISOString().split('T')[0];
+
+  const { data, error } = await supabase
+    .from('usage')
+    .select('prompt_count')
+    .eq('user_id', userId)
+    .eq('date', today)
+    .single();
+
+  if (error && error.code !== 'PGRST116') { // PGRST116 = no rows
+    console.error('Error checking rate limit:', error);
+    return { allowed: true, remaining: DAILY_PROMPT_LIMIT };
+  }
+
+  const count = data?.prompt_count || 0;
+  const remaining = DAILY_PROMPT_LIMIT - count;
+
+  return {
+    allowed: count < DAILY_PROMPT_LIMIT,
+    remaining: Math.max(0, remaining),
+    limit: DAILY_PROMPT_LIMIT,
+  };
+}
+
+export async function incrementUsage(userId) {
+  if (!supabase) return;
+
+  const today = new Date().toISOString().split('T')[0];
+
+  // Try to increment existing row
+  const { data, error } = await supabase
+    .from('usage')
+    .select('id, prompt_count')
+    .eq('user_id', userId)
+    .eq('date', today)
+    .single();
+
+  if (error && error.code === 'PGRST116') {
+    // No row exists, create one
+    await supabase
+      .from('usage')
+      .insert({ user_id: userId, date: today, prompt_count: 1 });
+  } else if (data) {
+    // Increment existing
+    await supabase
+      .from('usage')
+      .update({ prompt_count: data.prompt_count + 1 })
+      .eq('id', data.id);
+  }
+}
